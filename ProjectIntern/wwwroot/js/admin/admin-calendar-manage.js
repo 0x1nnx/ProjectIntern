@@ -21,6 +21,7 @@ function initializeAdminCalendar(config) {
         mode: "multiple",
         inline: true,
         dateFormat: "Y-m-d",
+        locale: { firstDayOfWeek: 1 },
         minDate: config.minDate,
         maxDate: config.maxDate,
         disableMobile: true,

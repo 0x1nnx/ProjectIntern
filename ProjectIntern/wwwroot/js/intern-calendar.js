@@ -12,6 +12,7 @@
         mode: "single",
         inline: true,
         dateFormat: "Y-m-d",
+        locale: { firstDayOfWeek: 1 },
         minDate: minDate,
         maxDate: maxDate,
         clickOpens: false,
