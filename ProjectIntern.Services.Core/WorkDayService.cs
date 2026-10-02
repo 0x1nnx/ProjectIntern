@@ -253,9 +253,9 @@ public class WorkDayService : IWorkDayService
             {
                 Id = w.Id,
                 Date = w.Date,
-                IsRevealed = w.Date < today,
-                TopicName = w.Date < today ? w.Topic.Name : null,
-                TopicDescription = w.Date < today ? w.Topic.Description : null,
+                IsRevealed = w.Date <= today,
+                TopicName = w.Date <= today ? w.Topic.Name : null,
+                TopicDescription = w.Date <= today ? w.Topic.Description : null,
             })
             .ToListAsync();
 
