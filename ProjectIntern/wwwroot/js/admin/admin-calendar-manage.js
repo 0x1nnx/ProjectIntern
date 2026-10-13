@@ -72,7 +72,28 @@ function updateSummary() {
 function updateButtons() {
     const { selectedDates, config } = adminCalendarState;
     document.getElementById('btn-add').disabled = !selectedDates.some(d => !config.existingDates.includes(d));
-    document.getElementById('btn-remove').disabled = !selectedDates.some(d => config.existingDates.includes(d));
+    const hasExisting = selectedDates.some(d => config.existingDates.includes(d));
+    document.getElementById('btn-remove').disabled = !hasExisting;
+    document.getElementById('btn-hours').disabled = !hasExisting;
+}
+
+function getWorkingHours() {
+    const startTime = document.getElementById('start-time').value;
+    const endTime = document.getElementById('end-time').value;
+
+    if (!startTime && !endTime) return { startTime: null, endTime: null };
+
+    if (!startTime || !endTime) {
+        toast('warning', 'Please fill in both start and end time, or leave both empty.');
+        return null;
+    }
+
+    if (endTime <= startTime) {
+        toast('warning', 'End time must be after start time.');
+        return null;
+    }
+
+    return { startTime, endTime };
 }
 
 function clearSelection() {
@@ -97,8 +118,14 @@ function previewDay(dateStr) {
     }
 
     const formatted = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const startTime = data.StartTime || data.startTime;
+    const endTime = data.EndTime || data.endTime;
+    const hours = startTime && endTime
+        ? `<p class="mb-2"><span class="badge bg-light text-dark border">${startTime} – ${endTime}</span></p>`
+        : '';
     preview.innerHTML = `
         <p class="text-muted small text-uppercase fw-semibold mb-1 mt-2">${formatted}</p>
+        ${hours}
         <h5 class="fw-bold">${data.TopicName || data.topicName || ''}</h5>
         <p class="text-muted">${data.TopicDescription || data.topicDescription || ''}</p>`;
 }
@@ -108,6 +135,9 @@ async function addDays() {
     const newDates = selectedDates.filter(d => !config.existingDates.includes(d));
     if (!newDates.length) return;
 
+    const hours = getWorkingHours();
+    if (!hours) return;
+
     setLoading('btn-add', true);
     try {
         const res = await fetch(config.addUrl, {
@@ -116,7 +146,7 @@ async function addDays() {
                 'Content-Type': 'application/json',
                 'RequestVerificationToken': config.tokenValue
             },
-            body: JSON.stringify({ internId: config.internId, dates: newDates })
+            body: JSON.stringify({ internId: config.internId, dates: newDates, ...hours })
         });
         const json = await res.json();
         res.ok ? toast('success', json.message ?? 'Work days added.') : toast('danger', json.message ?? 'Failed to add work days.');
@@ -125,6 +155,34 @@ async function addDays() {
         toast('danger', 'Network error. Please try again.');
     } finally {
         setLoading('btn-add', false);
+    }
+}
+
+async function updateHours() {
+    const { selectedDates, config } = adminCalendarState;
+    const toUpdate = selectedDates.filter(d => config.existingDates.includes(d));
+    if (!toUpdate.length) return;
+
+    const hours = getWorkingHours();
+    if (!hours) return;
+
+    setLoading('btn-hours', true);
+    try {
+        const res = await fetch(config.updateHoursUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': config.tokenValue
+            },
+            body: JSON.stringify({ internId: config.internId, dates: toUpdate, ...hours })
+        });
+        const json = await res.json();
+        res.ok ? toast('success', json.message ?? 'Work hours updated.') : toast('danger', json.message ?? 'Failed to update work hours.');
+        if (res.ok) setTimeout(() => location.reload(), 1000);
+    } catch {
+        toast('danger', 'Network error. Please try again.');
+    } finally {
+        setLoading('btn-hours', false);
     }
 }
 
@@ -159,10 +217,12 @@ async function removeDays() {
 function setLoading(btnId, loading) {
     const btn = document.getElementById(btnId);
     if (!btn) return;
-    btn.disabled = loading;
-    btn.innerHTML = loading ? 'Saving...' : (btn.dataset.original ?? btn.innerHTML);
-    if (!loading) {
+    if (loading) {
         btn.dataset.original = btn.innerHTML;
+        btn.innerHTML = 'Saving...';
+        btn.disabled = true;
+    } else {
+        btn.innerHTML = btn.dataset.original ?? btn.innerHTML;
         updateButtons();
     }
 }

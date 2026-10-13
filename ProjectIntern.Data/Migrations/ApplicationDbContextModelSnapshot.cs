@@ -201,11 +201,17 @@ namespace ProjectIntern.Data.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<Guid>("InternId")
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time without time zone");
 
                     b.Property<Guid>("TopicId")
                         .HasColumnType("uuid");

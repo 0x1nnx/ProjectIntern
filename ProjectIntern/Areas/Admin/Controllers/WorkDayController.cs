@@ -2,6 +2,7 @@
 using ProjectIntern.Services.Core.Interfaces;
 using ProjectIntern.Web.ViewModels.Admin.Requests;
 using ProjectIntern.Web.ViewModels.Admin.WorkDay;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace ProjectIntern.Areas.Admin.Controllers;
@@ -52,7 +53,9 @@ public class WorkDayController : BaseAdminController
             IEnumerable<DateTime> dates = request.Dates
                 .Select(d => DateTime.SpecifyKind(DateTime.Parse(d), DateTimeKind.Utc));
 
-            await workDayService.CreateWorkDayAsync(request.InternId, dates, adminId);
+            (TimeOnly? startTime, TimeOnly? endTime) = ParseWorkingHours(request);
+
+            await workDayService.CreateWorkDayAsync(request.InternId, dates, startTime, endTime, adminId);
             return Ok(new { message = "Work days added successfully." });
         }
         catch (InvalidOperationException ex)
@@ -64,6 +67,35 @@ public class WorkDayController : BaseAdminController
         {
             logger.LogError(ex, "Error adding work days for intern {InternId}", request.InternId);
             return StatusCode(500, new { message = "An error occurred while adding work days." });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateHours([FromBody] WorkDayBatchRequestModel request)
+    {
+        if (request == null || !request.Dates.Any())
+            return BadRequest("No dates provided.");
+
+        try
+        {
+            IEnumerable<DateTime> dates = request.Dates
+                .Select(d => DateTime.SpecifyKind(DateTime.Parse(d), DateTimeKind.Utc));
+
+            (TimeOnly? startTime, TimeOnly? endTime) = ParseWorkingHours(request);
+
+            await workDayService.UpdateWorkDayHoursAsync(request.InternId, dates, startTime, endTime);
+            return Ok(new { message = "Work hours updated successfully." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning(ex, "Business rule violation updating hours for intern {InternId}", request.InternId);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating work hours for intern {InternId}", request.InternId);
+            return StatusCode(500, new { message = "An error occurred while updating work hours." });
         }
     }
 
@@ -94,6 +126,22 @@ public class WorkDayController : BaseAdminController
             logger.LogError(ex, "Error removing work days for intern {InternId}", request.InternId);
             return StatusCode(500, new { message = "An error occurred while removing work days." });
         }
+    }
+
+    private static (TimeOnly? StartTime, TimeOnly? EndTime) ParseWorkingHours(WorkDayBatchRequestModel request)
+    {
+        return (ParseTime(request.StartTime), ParseTime(request.EndTime));
+    }
+
+    private static TimeOnly? ParseTime(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (!TimeOnly.TryParseExact(value, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly time))
+            throw new InvalidOperationException($"Invalid time format: {value}");
+
+        return time;
     }
 
     private Guid GetCurrentUserId()

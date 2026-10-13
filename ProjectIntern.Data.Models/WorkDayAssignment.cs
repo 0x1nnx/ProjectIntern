@@ -4,6 +4,8 @@ public class WorkDayAssignment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTime Date { get; set; }
+    public TimeOnly? StartTime { get; set; }
+    public TimeOnly? EndTime { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

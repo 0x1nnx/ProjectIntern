@@ -25,8 +25,10 @@ public class WorkDayService : IWorkDayService
         this.logger = logger;
     }
 
-    public async Task CreateWorkDayAsync(Guid internId, IEnumerable<DateTime> dates, Guid adminId)
+    public async Task CreateWorkDayAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime, Guid adminId)
     {
+        ValidateWorkingHours(startTime, endTime);
+
         ApplicationUser applicationUser = await userManager
             .Users
             .IgnoreQueryFilters()
@@ -119,6 +121,8 @@ public class WorkDayService : IWorkDayService
                 existing.IsDeleted = false;
                 existing.CreatedByUserId = adminId;
                 existing.CreatedAt = DateTime.UtcNow;
+                existing.StartTime = startTime;
+                existing.EndTime = endTime;
 
                 if (date > todayUtc && nextTopic != null)
                 {
@@ -134,6 +138,8 @@ public class WorkDayService : IWorkDayService
             {
                 Id = Guid.NewGuid(),
                 Date = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+                StartTime = startTime,
+                EndTime = endTime,
                 InternId = internId,
                 TopicId = nextTopic!.Id,
                 CreatedByUserId = adminId,
@@ -156,6 +162,39 @@ public class WorkDayService : IWorkDayService
         catch (Exception ex)
         {
             throw new DbUpdateException("An error occurred while saving work days.", ex);
+        }
+    }
+
+    public async Task UpdateWorkDayHoursAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime)
+    {
+        ValidateWorkingHours(startTime, endTime);
+
+        List<DateTime> normalizedDates = dates
+            .Select(d => DateTime.SpecifyKind(d.Date, DateTimeKind.Utc))
+            .Distinct()
+            .ToList();
+
+        List<WorkDayAssignment> workDays = await workDayAssignmentRepository
+            .GetQueryable(asNoTracking: false)
+            .Where(w => w.InternId == internId && normalizedDates.Contains(w.Date))
+            .ToListAsync();
+
+        if (!workDays.Any())
+            throw new InvalidOperationException("None of the selected dates have work days assigned.");
+
+        foreach (WorkDayAssignment workDay in workDays)
+        {
+            workDay.StartTime = startTime;
+            workDay.EndTime = endTime;
+        }
+
+        try
+        {
+            await workDayAssignmentRepository.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new DbUpdateException("An error occurred while updating work hours.", ex);
         }
     }
 
@@ -230,6 +269,8 @@ public class WorkDayService : IWorkDayService
             {
                 Id = w.Id,
                 Date = w.Date,
+                StartTime = w.StartTime,
+                EndTime = w.EndTime,
                 TopicName = w.Topic.Name,
                 TopicDescription = w.Topic.Description
             }).ToListAsync()
@@ -253,6 +294,8 @@ public class WorkDayService : IWorkDayService
             {
                 Id = w.Id,
                 Date = w.Date,
+                StartTime = w.StartTime,
+                EndTime = w.EndTime,
                 IsRevealed = w.Date < today,
                 TopicName = w.Date < today ? w.Topic.Name : null,
                 TopicDescription = w.Date < today ? w.Topic.Description : null,
@@ -274,6 +317,15 @@ public class WorkDayService : IWorkDayService
             CompletedTopicsCount = completedTopicsCount,
             WorkDays = workDays
         };
+    }
+
+    private static void ValidateWorkingHours(TimeOnly? startTime, TimeOnly? endTime)
+    {
+        if (startTime.HasValue != endTime.HasValue)
+            throw new InvalidOperationException("Both start and end time must be provided, or neither.");
+
+        if (startTime.HasValue && endTime!.Value <= startTime.Value)
+            throw new InvalidOperationException("End time must be after start time.");
     }
 
     private async Task<ApplicationUser> CheckUserExistsWithSpecialityIncluded(Guid internId)

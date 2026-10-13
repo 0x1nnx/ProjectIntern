@@ -18,7 +18,13 @@
         .Where(w => w.IsRevealed)
         .ToDictionary(
             w => w.Date.ToString("yyyy-MM-dd"),
-            w => new { w.TopicName, w.TopicDescription }
+            w => new
+            {
+                w.TopicName,
+                w.TopicDescription,
+                StartTime = w.StartTime?.ToString("HH:mm"),
+                EndTime = w.EndTime?.ToString("HH:mm")
+            }
         );
 }
 
@@ -137,6 +143,12 @@
                                                 <div class="text-muted" style="font-size:0.75rem;">
                                                     <i class="fas fa-lock me-1"></i>Topic revealed on the day
                                                 </div>
+                                                @if (day.StartTime.HasValue && day.EndTime.HasValue)
+                                                {
+                                                    <div class="small">
+                                                        <i class="fas fa-clock me-1 text-muted"></i>@day.StartTime.Value.ToString("HH:mm") – @day.EndTime.Value.ToString("HH:mm")
+                                                    </div>
+                                                }
                                             </div>
                                         </div>
                                     }
@@ -172,6 +184,12 @@
                                                 <div>
                                                     <div class="fw-semibold small">@day.Date.ToString("dddd, dd MMM yyyy")</div>
                                                     <div class="text-muted" style="font-size:0.75rem;">@day.TopicName</div>
+                                                    @if (day.StartTime.HasValue && day.EndTime.HasValue)
+                                                    {
+                                                        <div class="text-muted" style="font-size:0.75rem;">
+                                                            <i class="fas fa-clock me-1"></i>@day.StartTime.Value.ToString("HH:mm") – @day.EndTime.Value.ToString("HH:mm")
+                                                        </div>
+                                                    }
                                                 </div>
                                             </div>
                                             <i class="fas fa-chevron-right text-muted" style="font-size:0.72rem;"></i>

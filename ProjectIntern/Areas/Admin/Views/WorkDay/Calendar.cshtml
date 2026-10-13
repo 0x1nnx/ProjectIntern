@@ -4,7 +4,13 @@
     var workDayDates = Model.WorkDays.Select(w => w.Date.ToString("yyyy-MM-dd")).ToList();
     var workDayMap = Model.WorkDays.ToDictionary(
         w => w.Date.ToString("yyyy-MM-dd"),
-        w => new { w.TopicName, w.TopicDescription }
+        w => new
+        {
+            w.TopicName,
+            w.TopicDescription,
+            StartTime = w.StartTime?.ToString("HH:mm"),
+            EndTime = w.EndTime?.ToString("HH:mm")
+        }
     );
 }
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
@@ -54,6 +60,23 @@
                 </div>
             </div>
 
+            <div class="card shadow-sm mb-3" style="width: 330px;">
+                <div class="card-header">Working hours</div>
+                <div class="card-body py-2">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div class="flex-fill">
+                            <label for="start-time" class="form-label small mb-1">From</label>
+                            <input type="time" id="start-time" class="form-control form-control-sm" value="09:00" />
+                        </div>
+                        <div class="flex-fill">
+                            <label for="end-time" class="form-label small mb-1">To</label>
+                            <input type="time" id="end-time" class="form-control form-control-sm" value="17:00" />
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Leave both empty for no specific hours</small>
+                </div>
+            </div>
+
             <div class="alert alert-light border mb-3 py-2" style="width: 330px" id="selection-summary">
                 <span id="summary-text">No dates selected</span>
             </div>
@@ -61,6 +84,9 @@
             <div class="d-flex gap-3 flex-wrap justify-content-center" style="max-width: 330px;">
                 <button class="btn btn-primary" id="btn-add" onclick="addDays()" disabled>
                     Add days
+                </button>
+                <button class="btn btn-outline-primary" id="btn-hours" onclick="updateHours()" disabled>
+                    Update hours
                 </button>
                 <button class="btn btn-outline-danger" id="btn-remove" onclick="removeDays()" disabled>
                     Remove days
@@ -102,6 +128,12 @@
                                     <div class="fw-semibold small">@day.Date.ToString("dddd, dd MMM yyyy")</div>
                                     <div class="text-muted" style="font-size:0.75rem;">@day.TopicName</div>
                                 </div>
+                                @if (day.StartTime.HasValue && day.EndTime.HasValue)
+                                {
+                                    <span class="badge bg-light text-dark border">
+                                        @day.StartTime.Value.ToString("HH:mm") – @day.EndTime.Value.ToString("HH:mm")
+                                    </span>
+                                }
                             </div>
                         }
                     }
@@ -129,6 +161,7 @@
         internId: '@Model.InternId',
         addUrl: '@Url.Action("AddDays", "WorkDay")',
         removeUrl: '@Url.Action("RemoveDays", "WorkDay")',
+        updateHoursUrl: '@Url.Action("UpdateHours", "WorkDay")',
         existingDates: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(workDayDates)),
         workDayMap: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(workDayMap)),
         minDate: @(Model.InternshipStartDate.HasValue ? Html.Raw($"'{Model.InternshipStartDate.Value.ToString("yyyy-MM-dd")}'") : Html.Raw("null")),

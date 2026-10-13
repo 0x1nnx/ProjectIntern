@@ -62,8 +62,15 @@ function previewDay(dateStr, dataMap) {
     const formatted = new Date(dateStr + 'T00:00:00')
         .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+    const startTime = data.StartTime || data.startTime;
+    const endTime = data.EndTime || data.endTime;
+    const hours = startTime && endTime
+        ? `<p class="mb-2"><span class="badge bg-light text-dark border"><i class="fas fa-clock me-1"></i>${startTime} – ${endTime}</span></p>`
+        : '';
+
     preview.innerHTML = `
         <p class="text-muted small text-uppercase fw-semibold mb-1 mt-2">${formatted}</p>
+        ${hours}
         <h5 class="fw-bold">${data.TopicName || data.topicName || ''}</h5>
         <p class="text-muted">${data.TopicDescription || data.topicDescription || ''}</p>`;
 }
