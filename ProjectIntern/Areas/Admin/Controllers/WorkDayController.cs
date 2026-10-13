@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ProjectIntern.GCommon;
 using ProjectIntern.Services.Core.Interfaces;
 using ProjectIntern.Web.ViewModels.Admin.Requests;
 using ProjectIntern.Web.ViewModels.Admin.WorkDay;
-using System.Globalization;
 using System.Security.Claims;
 
 namespace ProjectIntern.Areas.Admin.Controllers;
@@ -130,18 +130,7 @@ public class WorkDayController : BaseAdminController
 
     private static (TimeOnly? StartTime, TimeOnly? EndTime) ParseWorkingHours(WorkDayBatchRequestModel request)
     {
-        return (ParseTime(request.StartTime), ParseTime(request.EndTime));
-    }
-
-    private static TimeOnly? ParseTime(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        if (!TimeOnly.TryParseExact(value, new[] { "HH:mm", "HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly time))
-            throw new InvalidOperationException($"Invalid time format: {value}");
-
-        return time;
+        return (WorkingHoursParser.Parse(request.StartTime), WorkingHoursParser.Parse(request.EndTime));
     }
 
     private Guid GetCurrentUserId()

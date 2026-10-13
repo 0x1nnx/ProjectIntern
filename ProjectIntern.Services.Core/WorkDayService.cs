@@ -25,7 +25,7 @@ public class WorkDayService : IWorkDayService
         this.logger = logger;
     }
 
-    public async Task CreateWorkDayAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime, Guid adminId)
+    public async Task CreateWorkDayAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime, Guid createdByUserId)
     {
         ValidateWorkingHours(startTime, endTime);
 
@@ -119,7 +119,7 @@ public class WorkDayService : IWorkDayService
             if (existing != null)
             {
                 existing.IsDeleted = false;
-                existing.CreatedByUserId = adminId;
+                existing.CreatedByUserId = createdByUserId;
                 existing.CreatedAt = DateTime.UtcNow;
                 existing.StartTime = startTime;
                 existing.EndTime = endTime;
@@ -142,7 +142,7 @@ public class WorkDayService : IWorkDayService
                 EndTime = endTime,
                 InternId = internId,
                 TopicId = nextTopic!.Id,
-                CreatedByUserId = adminId,
+                CreatedByUserId = createdByUserId,
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false,
             };
@@ -248,6 +248,24 @@ public class WorkDayService : IWorkDayService
         await userManager.UpdateAsync(applicationUser);
     }
 
+    public async Task CreateWorkDaysAsInternAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime)
+    {
+        EnsureNoPastDates(dates);
+        await CreateWorkDayAsync(internId, dates, startTime, endTime, internId);
+    }
+
+    public async Task UpdateWorkDayHoursAsInternAsync(Guid internId, IEnumerable<DateTime> dates, TimeOnly? startTime, TimeOnly? endTime)
+    {
+        EnsureNoPastDates(dates);
+        await UpdateWorkDayHoursAsync(internId, dates, startTime, endTime);
+    }
+
+    public async Task DeleteWorkDaysAsInternAsync(Guid internId, IEnumerable<DateTime> dates)
+    {
+        EnsureNoPastDates(dates);
+        await DeleteWorkDaysAsync(internId, dates, internId);
+    }
+
     public async Task<InternCalendarAdminViewModel> GetWorkDaysForInternAsAdminAsync(Guid internId)
     {
         ApplicationUser? applicationUser = await CheckUserExistsWithSpecialityIncluded(internId);
@@ -317,6 +335,14 @@ public class WorkDayService : IWorkDayService
             CompletedTopicsCount = completedTopicsCount,
             WorkDays = workDays
         };
+    }
+
+    private static void EnsureNoPastDates(IEnumerable<DateTime> dates)
+    {
+        DateTime todayUtc = DateTime.UtcNow.Date;
+
+        if (dates.Any(d => d.Date < todayUtc))
+            throw new InvalidOperationException("Past days cannot be changed. Please contact your administrator.");
     }
 
     private static void ValidateWorkingHours(TimeOnly? startTime, TimeOnly? endTime)

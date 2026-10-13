@@ -26,6 +26,17 @@
                 EndTime = w.EndTime?.ToString("HH:mm")
             }
         );
+
+    var upcomingMap = Model.WorkDays
+        .Where(w => !w.IsRevealed)
+        .ToDictionary(
+            w => w.Date.ToString("yyyy-MM-dd"),
+            w => new
+            {
+                StartTime = w.StartTime?.ToString("HH:mm"),
+                EndTime = w.EndTime?.ToString("HH:mm")
+            }
+        );
 }
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
@@ -104,6 +115,45 @@
                     <div class="card-body p-2">
                         <input id="calendar-input" type="text" style="display:none;" />
                     </div>
+                    <div class="card-footer small text-muted">
+                        Click days from today onwards to select them, click again to deselect.
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3" style="width: 330px;">
+                    <div class="card-header"><i class="fas fa-clock me-2"></i>Working hours</div>
+                    <div class="card-body py-2">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-fill">
+                                <label for="start-time" class="form-label small mb-1">From</label>
+                                <input type="time" id="start-time" class="form-control form-control-sm" value="09:00" />
+                            </div>
+                            <div class="flex-fill">
+                                <label for="end-time" class="form-label small mb-1">To</label>
+                                <input type="time" id="end-time" class="form-control form-control-sm" value="17:00" />
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-1">Leave both empty for no specific hours</small>
+                    </div>
+                </div>
+
+                <div class="alert alert-light border my-3 py-2" style="width: 330px" id="selection-summary">
+                    <span id="summary-text">No dates selected</span>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap justify-content-center" style="max-width: 330px;">
+                    <button class="btn btn-primary" id="btn-add" onclick="addDays()" disabled>
+                        Add days
+                    </button>
+                    <button class="btn btn-outline-primary" id="btn-hours" onclick="updateHours()" disabled>
+                        Update hours
+                    </button>
+                    <button class="btn btn-outline-danger" id="btn-remove" onclick="removeDays()" disabled>
+                        Remove days
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearSelection()">
+                        Clear
+                    </button>
                 </div>
             </div>
 
@@ -119,7 +169,7 @@
                             </div>
                             <div class="card-body text-center text-muted" id="topic-preview" style="min-height:140px;">
                                 <i class="fas fa-hand-pointer d-block mb-2 mt-3" style="font-size:1.5rem;"></i>
-                                <span>Click a covered day on the calendar to see its topic</span>
+                                <span>Click a covered day to see its topic</span>
                             </div>
                         </div>
                     </div>
@@ -213,6 +263,8 @@
     }
 </div>
 
+<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;"></div>
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="~/js/intern-calendar.js"></script>
@@ -223,6 +275,11 @@
             revealedDates: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(revealedDates)),
             upcomingDates: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(upcomingDates)),
             revealedMap: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(revealedMap)),
+            upcomingMap: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(upcomingMap)),
+            addUrl: '@Url.Action("AddDays", "Calendar")',
+            removeUrl: '@Url.Action("RemoveDays", "Calendar")',
+            updateHoursUrl: '@Url.Action("UpdateHours", "Calendar")',
+            antiforgeryTokenHtml: '@Html.AntiForgeryToken()',
             minDate: @(Model.InternshipStartDate.HasValue ? Html.Raw($"'{Model.InternshipStartDate.Value.ToString("yyyy-MM-dd")}'") : Html.Raw("null")),
             maxDate: @(Model.InternshipEndDate.HasValue ? Html.Raw($"'{Model.InternshipEndDate.Value.ToString("yyyy-MM-dd")}'") : Html.Raw("null"))
         };
