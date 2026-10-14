@@ -161,8 +161,7 @@ namespace ProjectIntern.Data.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("InternshipSpecialityId")
                         .HasColumnType("uuid");

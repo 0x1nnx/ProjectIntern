@@ -18,8 +18,7 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
             .HasMaxLength(150);
 
         builder.Property(t => t.Description)
-            .IsRequired()
-            .HasMaxLength(2000);
+            .IsRequired();
 
         builder.Property(t => t.Order)
             .IsRequired();

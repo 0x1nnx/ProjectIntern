@@ -14,6 +14,5 @@ public class TopicEditInputModel
     public string Name { get; set; } = null!;
     [Required]
     [MinLength(8)]
-    [MaxLength(2000)]
     public string Description { get; set; } = null!;
 }
